@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:postal_codes_app/controllers/input_text_controller.dart';
 import 'package:postal_codes_app/models/postal_code_request_model.dart';
-import 'package:postal_codes_app/services/postal_code_web_service.dart';
 
-//https://jsonplaceholder.typicode.com/posts/1
+final InputTextController _inputController = InputTextController();
 
 class MainView extends StatefulWidget {
   const MainView({super.key});
@@ -14,18 +14,46 @@ class MainView extends StatefulWidget {
 class _MainViewState extends State<MainView> {
   bool _isLoaded = false;
   PostalCodeRequestModel? _postalCodeData;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    _inputController.textController.addListener(_onTextChanged);
   }
 
-  Future<void> _loadData() async {
-    _postalCodeData =
-        await PostalCodeWebService.instance.getFromApiWithPostalCode();
-    _isLoaded = true;
-    setState(() {});
+  @override
+  void dispose() {
+    _inputController.textController.removeListener(_onTextChanged);
+    _inputController.textController.dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged() {
+    final postalCode = _inputController.textController.text;
+
+    if (postalCode.length == 5 && int.tryParse(postalCode) != null) {
+      _fetchPostalCodeData(postalCode);
+    }
+  }
+
+  Future<void> _fetchPostalCodeData(String postalCode) async {
+    setState(() {
+      _isLoaded = false;
+      _errorMessage = null;
+    });
+
+    final result = await _inputController.fetchPostalCodeData(postalCode);
+    setState(() {
+      if (result != null) {
+        _postalCodeData = result;
+        _isLoaded = true;
+      } else {
+        _postalCodeData = null;
+        _isLoaded = true;
+        _errorMessage = "No s'ha trobat informacio del codi postal";
+      }
+    });
   }
 
   @override
@@ -34,20 +62,48 @@ class _MainViewState extends State<MainView> {
       appBar: AppBar(
         title: Text('Aplicació de búsqueda de codis postals'),
       ),
-      body: Center(
-        child: _isLoaded
-            ? ListView.builder(
-                itemCount: _postalCodeData?.places.length ?? 0,
-                itemBuilder: (context, index) {
-                  final place = _postalCodeData!.places[index];
-                  return ListTile(
-                    title: Text(place.placeName),
-                    subtitle: Text(
-                        'Country: ${_postalCodeData!.country}, Postcode: ${_postalCodeData!.postCode}'),
-                  );
-                },
-              )
-            : CircularProgressIndicator(),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // Input para el código postal
+            TextField(
+              controller: _inputController.textController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Introdueix el codi postal',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            SizedBox(height: 16),
+            // Error
+            if (_errorMessage != null)
+              Text(
+                _errorMessage!,
+                style: TextStyle(color: Colors.red),
+              ),
+            // Lista de resultados
+            Expanded(
+              child: _isLoaded
+                  ? _postalCodeData != null
+                      ? ListView.builder(
+                          itemCount: _postalCodeData?.places.length ?? 0,
+                          itemBuilder: (context, index) {
+                            final place = _postalCodeData!.places[index];
+                            return ListTile(
+                              title: Text(place.placeName),
+                              subtitle: Text(
+                                  'Country: ${_postalCodeData!.country}, Postcode: ${_postalCodeData!.postCode}'),
+                            );
+                          },
+                        )
+                      : Center(
+                          child: Text('EL codi postal introduit no es válid'),
+                        )
+                  : Center(child: CircularProgressIndicator()),
+            ),
+          ],
+        ),
       ),
     );
   }

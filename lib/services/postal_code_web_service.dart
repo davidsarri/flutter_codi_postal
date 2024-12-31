@@ -7,9 +7,10 @@ class PostalCodeWebService {
 
   num? postalCode;
 
-  Future<PostalCodeRequestModel> getFromApiWithPostalCode() async {
-    http.Response resposta =
-        await http.get(Uri.parse('https://api.zippopotam.us/es/25240'));
+  Future<PostalCodeRequestModel> getFromApiWithPostalCode(
+      int postalCode) async {
+    final url = 'https://api.zippopotam.us/es/$postalCode';
+    http.Response resposta = await http.get(Uri.parse(url));
     final postalCodeRequestModel = postalCodeRequestFromJson(resposta.body);
     return postalCodeRequestModel;
   }
