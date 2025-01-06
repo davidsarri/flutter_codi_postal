@@ -13,6 +13,7 @@ class MainView extends StatefulWidget {
 
 class _MainViewState extends State<MainView> {
   bool _isLoaded = false;
+  bool _isLoading = false;
   PostalCodeRequestModel? _postalCodeData;
   String? _errorMessage;
 
@@ -39,12 +40,14 @@ class _MainViewState extends State<MainView> {
 
   Future<void> _fetchPostalCodeData(String postalCode) async {
     setState(() {
+      _isLoading = true;
       _isLoaded = false;
       _errorMessage = null;
     });
 
     final result = await _inputController.fetchPostalCodeData(postalCode);
     setState(() {
+      _isLoading = false;
       if (result != null) {
         _postalCodeData = result;
         _isLoaded = true;
@@ -66,7 +69,6 @@ class _MainViewState extends State<MainView> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // Input para el código postal
             TextField(
               controller: _inputController.textController,
               keyboardType: TextInputType.number,
@@ -82,25 +84,34 @@ class _MainViewState extends State<MainView> {
                 _errorMessage!,
                 style: TextStyle(color: Colors.red),
               ),
-            // Lista de resultados
             Expanded(
-              child: _isLoaded
-                  ? _postalCodeData != null
-                      ? ListView.builder(
-                          itemCount: _postalCodeData?.places.length ?? 0,
-                          itemBuilder: (context, index) {
-                            final place = _postalCodeData!.places[index];
-                            return ListTile(
-                              title: Text(place.placeName),
-                              subtitle: Text(
-                                  'Country: ${_postalCodeData!.country}, Postcode: ${_postalCodeData!.postCode}'),
-                            );
-                          },
-                        )
+              child: _isLoading
+                  ? Center(
+                      child:
+                          CircularProgressIndicator()) // Mostra el loader si està carregant
+                  : _isLoaded
+                      ? (_postalCodeData != null
+                          ? ListView.builder(
+                              itemCount: _postalCodeData?.places.length ?? 0,
+                              itemBuilder: (context, index) {
+                                final place = _postalCodeData!.places[index];
+                                return ListTile(
+                                  title: Text(place.placeName),
+                                  subtitle: Text(
+                                      'Country: ${_postalCodeData!.country}, Postcode: ${_postalCodeData!.postCode}'),
+                                );
+                              },
+                            )
+                          : Center(
+                              child:
+                                  Text('EL codi postal introduit no es válid'),
+                            ))
                       : Center(
-                          child: Text('EL codi postal introduit no es válid'),
-                        )
-                  : Center(child: CircularProgressIndicator()),
+                          child: Text(
+                            'Introdueix un codi postal per començar',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        ),
             ),
           ],
         ),

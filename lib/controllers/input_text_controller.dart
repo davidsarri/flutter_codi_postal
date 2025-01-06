@@ -1,14 +1,10 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-
-import '../models/postal_code_request_model.dart';
+import 'package:postal_codes_app/models/postal_code_request_model.dart';
+import 'package:postal_codes_app/services/postal_code_web_service.dart';
 
 class InputTextController {
   final TextEditingController textController = TextEditingController();
 
-  // Valida el codi postal introduït
   String? validatePostalCode(String postalCode) {
     if (postalCode.isEmpty) {
       return 'El camp no pot estar buit.';
@@ -19,20 +15,8 @@ class InputTextController {
     return null;
   }
 
-  // Fa la crida a l'API per obtenir informació del codi postal
   Future<PostalCodeRequestModel?> fetchPostalCodeData(String postalCode) async {
-    try {
-      final url = 'https://api.zippopotam.us/es/$postalCode';
-      final resposta = await http.get(Uri.parse(url));
-
-      if (resposta.statusCode == 200) {
-        return PostalCodeRequestModel.fromJson(jsonDecode(resposta.body));
-      } else {
-        return null; // Si l'API retorna un error, es gestiona com a "no trobat"
-      }
-    } catch (e) {
-      debugPrint('Error en la crida a l\'API: $e');
-      return null;
-    }
+    return await PostalCodeWebService.instance
+        .getFromApiWithPostalCode(postalCode);
   }
 }
